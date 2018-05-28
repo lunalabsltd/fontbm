@@ -19,6 +19,8 @@ struct GlyphInfo
 
     int xAdvance = 0;
 
+    bool fallback;
+
     bool isEmpty() const
     {
         return (width == 0) || (height == 0);

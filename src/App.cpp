@@ -19,21 +19,34 @@ std::vector<rbp::RectSize> App::getGlyphRectangles(const Glyphs &glyphs, const s
     return result;
 }
 
-App::Glyphs App::collectGlyphInfo(ft::Font& font, const std::set<std::uint32_t>& codes)
+App::Glyphs App::collectGlyphInfo(ft::Font& font, ft::Font* fallbackFont, const std::set<std::uint32_t>& codes)
 {
     Glyphs result;
 
     for (const auto& id : codes)
     {
-        if (!font.isGlyphProvided(id))
+        ft::Font::GlyphMetrics glyphMetrics;
+        GlyphInfo glyphInfo;
+
+        if (font.isGlyphProvided(id))
         {
-            std::cout << "warning: glyph " << id << " not found" << std::endl;
-            continue;
+            glyphMetrics = font.renderGlyph(nullptr, 0, 0, 0, 0, id, 0);
+            glyphInfo.fallback = false;
+        } 
+        else
+        {
+            if (fallbackFont && fallbackFont->isGlyphProvided(id))
+            {
+                glyphMetrics = fallbackFont->renderGlyph(nullptr, 0, 0, 0, 0, id, 0);
+                glyphInfo.fallback = true;
+            } 
+            else
+            {
+                std::cout << "warning: glyph " << id << " not found." << std::endl;
+                continue;
+            }
         }
 
-        const auto glyphMetrics = font.renderGlyph(nullptr, 0, 0, 0, 0, id, 0);
-
-        GlyphInfo glyphInfo;
         glyphInfo.width = glyphMetrics.width;
         glyphInfo.height = glyphMetrics.height;
         glyphInfo.xAdvance = glyphMetrics.horiAdvance;
@@ -109,7 +122,7 @@ void App::savePng(const std::string& fileName, const std::uint32_t* buffer, cons
         throw std::runtime_error("png save to file error " + std::to_string(error) + ": " + lodepng_error_text(error));
 }
 
-std::vector<std::string> App::renderTextures(const Glyphs& glyphs, const Config& config, ft::Font& font, const std::uint32_t pageCount)
+std::vector<std::string> App::renderTextures(const Glyphs& glyphs, const Config& config, ft::Font& font, ft::Font* fallbackFont, const std::uint32_t pageCount)
 {
     std::vector<std::string> fileNames;
 
@@ -134,7 +147,14 @@ std::vector<std::string> App::renderTextures(const Glyphs& glyphs, const Config&
                 const auto x = glyph.x + config.padding.left;
                 const auto y = glyph.y + config.padding.up;
 
-                font.renderGlyph(&surface[0], config.textureSize.w, config.textureSize.h, x, y, kv.first, config.color.getBGR());
+                if (!glyph.fallback)
+                {
+                    font.renderGlyph(&surface[0], config.textureSize.w, config.textureSize.h, x, y, kv.first, config.color.getBGR());
+                }
+                else
+                {
+                    fallbackFont->renderGlyph(&surface[0], config.textureSize.w, config.textureSize.h, x, y, kv.first, config.color.getBGR());   
+                }
             }
         }
 
@@ -260,10 +280,15 @@ void App::execute(const int argc, char* argv[])
 
     ft::Library library;
     ft::Font font(library, config.fontFile, config.fontSize);
+    ft::Font* fallbackFont = nullptr;
 
-    auto glyphs = collectGlyphInfo(font, config.chars);
+    if (config.fallbackFontFile != "") {
+        fallbackFont = new ft::Font(library, config.fallbackFontFile, config.fontSize);
+    }
+
+    auto glyphs = collectGlyphInfo(font, fallbackFont, config.chars);
     const auto pageCount = arrangeGlyphs(glyphs, config);
 
-    const auto fileNames = renderTextures(glyphs, config, font, pageCount);
+    const auto fileNames = renderTextures(glyphs, config, font, fallbackFont, pageCount);
     writeFontInfoFile(glyphs, config, font, fileNames);
 }

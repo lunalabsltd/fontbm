@@ -26,6 +26,7 @@ Config ProgramOptions::parseCommandLine(int argc, char* argv[])
         options.add_options()
             ("help", "produce help message")
             ("font-file", "path to ttf file, required", cxxopts::value<std::string>(config.fontFile))
+            ("fallback-font-file", "path to fallback ttf file", cxxopts::value<std::string>(config.fallbackFontFile))
             (charsOptionName,
              "required characters, for example: 32-64,92,120-126\ndefault value is 32-127 if 'chars-file' option is not defined",
              cxxopts::value<std::string>(chars))

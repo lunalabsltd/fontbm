@@ -52,6 +52,7 @@ struct Config
     };
 
     std::string fontFile;
+    std::string fallbackFontFile;
     std::set<std::uint32_t> chars;
     Color color;
     Color backgroundColor;
