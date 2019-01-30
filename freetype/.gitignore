@@ -1,0 +1,3 @@
+/objs/*
+/builds/unix/config.log
+/builds/unix/config.status
