@@ -2,6 +2,7 @@
 #include <iostream>
 #include <fstream>
 #include <functional>
+#define _REGEX_MAX_STACK_COUNT 200000
 #include <regex>
 #include "HelpException.h"
 #include "external/cxxopts.hpp"
